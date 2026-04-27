@@ -9,13 +9,14 @@ import { db } from '../db/client.js';
 import { logger } from '../lib/logger.js';
 import { executeGHLTool, GHL_TOOL_DEFINITIONS } from '../tools/ghl.js';
 import { executeM365Tool, M365_TOOL_DEFINITIONS } from '../tools/m365.js';
+import { executeGoogleTool, GOOGLE_TOOL_DEFINITIONS } from '../tools/google.js';
 import { executeRentSyncTool, RENTSYNC_TOOL_DEFINITIONS } from '../tools/rentsync.js';
 import { executeWordPressTool, WORDPRESS_TOOL_DEFINITIONS } from '../tools/wordpress.js';
 import { WEB_SEARCH_TOOL_DEFINITION } from '../tools/web-search.js';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type ToolSet = ReadonlyArray<'ghl' | 'm365' | 'rentsync' | 'wordpress' | 'web_search'>;
+type ToolSet = ReadonlyArray<'ghl' | 'm365' | 'google' | 'rentsync' | 'wordpress' | 'web_search'>;
 
 export interface AgentRunResult {
   success: boolean;
@@ -151,6 +152,7 @@ export abstract class BaseAgent {
     const defs: Anthropic.Tool[] = [];
     if (this.tools.includes('ghl'))        defs.push(...(GHL_TOOL_DEFINITIONS as unknown as Anthropic.Tool[]));
     if (this.tools.includes('m365'))       defs.push(...(M365_TOOL_DEFINITIONS as unknown as Anthropic.Tool[]));
+    if (this.tools.includes('google'))     defs.push(...(GOOGLE_TOOL_DEFINITIONS as unknown as Anthropic.Tool[]));
     if (this.tools.includes('rentsync'))   defs.push(...(RENTSYNC_TOOL_DEFINITIONS as unknown as Anthropic.Tool[]));
     if (this.tools.includes('wordpress')) defs.push(...(WORDPRESS_TOOL_DEFINITIONS as unknown as Anthropic.Tool[]));
     if (this.tools.includes('web_search')) defs.push(WEB_SEARCH_TOOL_DEFINITION as unknown as Anthropic.Tool);
@@ -160,6 +162,7 @@ export abstract class BaseAgent {
   private async executeTool(name: string, input: Record<string, unknown>): Promise<unknown> {
     if (name.startsWith('ghl_'))        return executeGHLTool(name, input);
     if (name.startsWith('m365_'))       return executeM365Tool(name, input);
+    if (name.startsWith('gdrive_') || name.startsWith('gmail_')) return executeGoogleTool(name, input);
     if (name.startsWith('rentsync_'))   return executeRentSyncTool(name, input);
     if (name.startsWith('wordpress_')) return executeWordPressTool(name, input);
     // web_search is handled natively by Claude — result comes back as tool_result from the API

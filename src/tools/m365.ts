@@ -3,7 +3,7 @@
  * Handles SharePoint file read/write, Outlook drafts, Teams webhooks, and Planner tasks.
  */
 import axios from 'axios';
-import { config } from '../lib/config.js';
+import { config, requireConfig } from '../lib/config.js';
 
 // ─── Auth: client credentials flow ───────────────────────────────────────────
 
@@ -14,11 +14,11 @@ async function getToken(): Promise<string> {
   if (_token && Date.now() < _tokenExpiry - 60_000) return _token;
 
   const res = await axios.post(
-    `https://login.microsoftonline.com/${config.M365_TENANT_ID}/oauth2/v2.0/token`,
+    `https://login.microsoftonline.com/${requireConfig('M365_TENANT_ID', 'M365')}/oauth2/v2.0/token`,
     new URLSearchParams({
       grant_type: 'client_credentials',
-      client_id: config.M365_CLIENT_ID,
-      client_secret: config.M365_CLIENT_SECRET,
+      client_id: requireConfig('M365_CLIENT_ID', 'M365'),
+      client_secret: requireConfig('M365_CLIENT_SECRET', 'M365'),
       scope: 'https://graph.microsoft.com/.default',
     }),
   );
@@ -82,13 +82,15 @@ export async function m365_create_email_draft(params: {
 
 type TeamsChannel = 'market' | 'digital' | 'reputation' | 'techops' | 'escalations';
 
-const CHANNEL_URLS: Record<TeamsChannel, string> = {
-  market:      config.M365_TEAMS_CHANNEL_MARKET,
-  digital:     config.M365_TEAMS_CHANNEL_DIGITAL,
-  reputation:  config.M365_TEAMS_CHANNEL_REPUTATION,
-  techops:     config.M365_TEAMS_CHANNEL_TECHOPS,
-  escalations: config.M365_TEAMS_CHANNEL_ESCALATIONS,
-};
+function getChannelUrls(): Record<TeamsChannel, string> {
+  return {
+    market:      requireConfig('M365_TEAMS_CHANNEL_MARKET', 'M365'),
+    digital:     requireConfig('M365_TEAMS_CHANNEL_DIGITAL', 'M365'),
+    reputation:  requireConfig('M365_TEAMS_CHANNEL_REPUTATION', 'M365'),
+    techops:     requireConfig('M365_TEAMS_CHANNEL_TECHOPS', 'M365'),
+    escalations: requireConfig('M365_TEAMS_CHANNEL_ESCALATIONS', 'M365'),
+  };
+}
 
 export async function m365_post_to_teams(params: {
   channel: TeamsChannel;
@@ -97,7 +99,7 @@ export async function m365_post_to_teams(params: {
   // Optional action buttons (adaptive card buttons)
   actions?: Array<{ label: string; url?: string; value?: string }>;
 }): Promise<void> {
-  const webhookUrl = CHANNEL_URLS[params.channel];
+  const webhookUrl = getChannelUrls()[params.channel];
 
   const card: Record<string, unknown> = {
     '@type': 'MessageCard',

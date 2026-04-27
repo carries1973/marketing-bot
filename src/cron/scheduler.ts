@@ -6,6 +6,9 @@
  */
 import cron from 'node-cron';
 import { runAgent08 } from '../agents/agent08-website-listings.js';
+import { gmail_check_yardi_inbox, gmail_save_yardi_attachments } from '../tools/google.js';
+import { notify } from '../tools/notify.js';
+import { config } from '../lib/config.js';
 import { logger } from '../lib/logger.js';
 
 function today(): string {
@@ -25,8 +28,36 @@ export function startScheduler() {
     await runAgent08({ mode: 'weekly_sync', date: today() });
   }, { timezone: 'America/Edmonton' });
 
+  // ─── PCG: Gmail Yardi inbox poller — 6:30am MT daily ─────────────────────
+  // Checks carrie@propertyconsultinggroup.ca for Yardi report emails
+  // and saves attachments to Google Drive before Agent 08 runs at 8:00am
+  if (config.NOTIFICATION_PROVIDER === 'google') {
+    cron.schedule('30 6 * * *', async () => {
+      logger.info('scheduler', 'Polling Gmail for Yardi reports');
+      try {
+        const attachments = await gmail_check_yardi_inbox();
+        if (attachments.length === 0) {
+          logger.info('scheduler', 'No new Yardi emails found');
+          return;
+        }
+        await gmail_save_yardi_attachments(attachments);
+        logger.info('scheduler', `Saved ${attachments.length} Yardi attachment(s) to Google Drive`);
+      } catch (err) {
+        const error = err instanceof Error ? err.message : String(err);
+        logger.error('scheduler', 'Yardi Gmail poller failed', error);
+        await notify({
+          channel: 'techops',
+          title: '⚠️ Yardi Gmail poller failed',
+          text: error,
+          urgent: true,
+        });
+      }
+    }, { timezone: 'America/Edmonton' });
+  }
+
   logger.info('scheduler', 'Cron scheduler started', {
     jobs: [
+      config.NOTIFICATION_PROVIDER === 'google' ? 'Gmail Yardi poller — 6:30am MT daily' : '(M365 Yardi pipeline — Power Automate)',
       'Agent 08 daily — 8:00am MT weekdays',
       'Agent 08 weekly sync — Sunday 11:00pm MT',
     ],

@@ -11,7 +11,7 @@
  * Requires Sam approval: email broadcast
  */
 import { BaseAgent } from './base.js';
-import { m365_post_to_teams } from '../tools/m365.js';
+import { notify } from '../tools/notify.js';
 import { db } from '../db/client.js';
 
 const SYSTEM_PROMPT = `You are a residential leasing content specialist for ZEN Residential in Canada.
@@ -107,10 +107,11 @@ Steps to complete:
   const result = await agent.run(userMessage, 'vacancy_detected');
 
   if (!result.success) {
-    await m365_post_to_teams({
+    await notify({
       channel: 'techops',
       title: '❌ Agent 01 — Leasing Content Failed',
       text: `Building: ${payload.buildingId}\nUnit: ${payload.unitType}\nError: ${result.output}`,
+      urgent: true,
     });
     return;
   }

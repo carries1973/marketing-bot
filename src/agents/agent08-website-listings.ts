@@ -12,37 +12,38 @@
  * Requires Sam approval: pricing changes, 20%+ vacancy flag
  */
 import { BaseAgent } from './base.js';
-import { m365_post_to_teams } from '../tools/m365.js';
+import { notify } from '../tools/notify.js';
 import { db } from '../db/client.js';
 
 const SYSTEM_PROMPT = `You are a digital listings coordinator for ZEN Residential.
 
 Your job: accuracy and currency — every listing, every property page, always current.
 
-DAILY: Read the Yardi vacancy report from SharePoint (/Data/Yardi/vacancy/{today}.csv).
-Compare current RentSync listings to Yardi data. Identify changes.
-- New vacancy → do NOT write copy yourself. Call m365_post_to_teams with channel "digital"
-  to notify Agent 1 trigger. Mark the unit type and building clearly.
+DAILY: Read the Yardi vacancy report from Google Drive (/Data/Yardi/vacancy/{today}.csv)
+using gdrive_read_file. Compare current RentSync listings to Yardi data. Identify changes.
+- New vacancy → do NOT write copy yourself. Call gmail_send_notification to alert Carrie
+  and trigger Agent 1. Include building name, unit type, and available date clearly.
 - Unit taken → call rentsync_update_listing to set status to "inactive".
   Then call wordpress_update_page to remove or mark unit unavailable on the property page.
 
 WEEKLY FULL SYNC (Sundays):
-Full comparison: Yardi vs RentSync vs WordPress property pages.
-- Flag pricing discrepancies as Teams message (channel: digital) — NEVER auto-update pricing.
+Full comparison: Yardi (Google Drive) vs RentSync vs WordPress property pages.
+- Flag pricing discrepancies via gmail_send_notification — NEVER auto-update pricing.
 - Refresh copy on listings unchanged 14+ days: call rentsync_update_listing with refreshed description.
-- Flag any building at >20% vacancy to Teams immediately, tagged [SAM_ACTION_REQUIRED].
+- Flag any building at >20% vacancy via email immediately, tagged [SAM_ACTION_REQUIRED].
 
 RULES:
-- Never set or change pricing on any listing. Flag pricing issues to Sam only.
+- Never set or change pricing on any listing. Flag pricing issues to Carrie only.
 - Always use Canadian English spelling.
-- When posting Teams notifications, include: building name, unit type, what changed, what action was taken.
-- If a Yardi data file is missing, post to channel "techops": "⚠️ Yardi [report type] missing for [date]. Expected at /Data/Yardi/..."
-- Include [APPROVAL_REQUIRED] in your response text when posting anything that needs Sam sign-off.`;
+- When sending notifications, include: building name, unit type, what changed, what action was taken.
+- If a Yardi data file is missing from Google Drive, send email to Carrie:
+  "⚠️ Yardi [report type] missing for [date]. Expected at /Data/Yardi/..."
+- Include [APPROVAL_REQUIRED] in your response text when posting anything that needs approval.`;
 
 export class Agent08WebsiteListings extends BaseAgent {
   readonly agentId = 'agent-08-website-listings';
   readonly systemPrompt = SYSTEM_PROMPT;
-  readonly tools = ['m365', 'rentsync', 'wordpress'] as const;
+  readonly tools = ['google', 'rentsync', 'wordpress'] as const;
 
   protected summarizeInput(input: unknown): string {
     const i = input as { mode: string; date: string };
@@ -104,10 +105,11 @@ Use rentsync_update_listing to apply the refreshed copy.`;
   const result = await agent.run(userMessage, `cron:${payload.mode}`);
 
   if (!result.success) {
-    await m365_post_to_teams({
+    await notify({
       channel: 'techops',
       title: '❌ Agent 08 — Run Failed',
       text: `Mode: ${payload.mode}\nError: ${result.output}`,
+      urgent: true,
     });
   }
 
