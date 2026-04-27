@@ -12,6 +12,7 @@ const schema = z.object({
   // ── GHL ───────────────────────────────────────────────────────────────────
   GHL_API_KEY: z.string().min(1),
   GHL_LOCATION_ID: z.string().min(1),
+  GHL_PIPELINE_ID: z.string().optional(),
 
   // ── Google Workspace (PCG / test environment) ──────────────────────────────
   GOOGLE_CLIENT_ID: z.string().optional(),
