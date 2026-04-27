@@ -5,7 +5,7 @@ const schema = z.object({
   ANTHROPIC_API_KEY: z.string().min(1),
 
   // ── Notification provider ──────────────────────────────────────────────────
-  // "google" = Gmail (PCG test) | "m365" = Teams (ZEN production)
+  // "google" = Gmail (PCG) | "m365" = Teams (ZEN production)
   NOTIFICATION_PROVIDER: z.enum(['google', 'm365']).default('google'),
   NOTIFY_EMAIL: z.string().email().default('carrie@propertyconsultinggroup.ca'),
 
@@ -14,11 +14,10 @@ const schema = z.object({
   GHL_LOCATION_ID: z.string().min(1),
   GHL_PIPELINE_ID: z.string().optional(),
 
-  // ── Google Workspace (PCG / test environment) ──────────────────────────────
+  // ── Google Workspace (PCG / google provider) ───────────────────────────────
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   GOOGLE_REFRESH_TOKEN: z.string().optional(),
-  // Google Drive folder IDs
   GOOGLE_DRIVE_YARDI_FOLDER_ID: z.string().optional(),
   GOOGLE_DRIVE_YARDI_VACANCY_FOLDER_ID: z.string().optional(),
   GOOGLE_DRIVE_YARDI_RENTROLL_FOLDER_ID: z.string().optional(),
@@ -26,7 +25,7 @@ const schema = z.object({
   GOOGLE_DRIVE_YARDI_LEASING_FOLDER_ID: z.string().optional(),
   GOOGLE_DRIVE_REPORTS_FOLDER_ID: z.string().optional(),
 
-  // ── Microsoft 365 (ZEN production only) ───────────────────────────────────
+  // ── Microsoft 365 (ZEN production only — not used in PCG environment) ──────
   M365_TENANT_ID: z.string().optional(),
   M365_CLIENT_ID: z.string().optional(),
   M365_CLIENT_SECRET: z.string().optional(),
@@ -37,7 +36,7 @@ const schema = z.object({
   M365_TEAMS_CHANNEL_TECHOPS: z.string().url().optional(),
   M365_TEAMS_CHANNEL_ESCALATIONS: z.string().url().optional(),
 
-  // ── RentSync ──────────────────────────────────────────────────────────────
+  // ── RentSync (ZEN production only) ────────────────────────────────────────
   RENTSYNC_API_KEY: z.string().optional(),
 
   // ── WordPress ─────────────────────────────────────────────────────────────
@@ -45,8 +44,8 @@ const schema = z.object({
   WORDPRESS_APP_PASSWORD: z.string().optional(),
   WORDPRESS_USERNAME: z.string().optional(),
 
-  // ── PostgreSQL ────────────────────────────────────────────────────────────
-  DATABASE_URL: z.string().min(1),
+  // ── PostgreSQL (optional — used for run logging; skipped if not set) ───────
+  DATABASE_URL: z.string().optional(),
 
   // ── Server ────────────────────────────────────────────────────────────────
   PORT: z.coerce.number().default(3000),
