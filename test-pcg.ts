@@ -12,7 +12,8 @@
 
 import Anthropic from '@anthropic-ai/sdk';
 import axios from 'axios';
-import 'dotenv/config';
+import dotenv from 'dotenv';
+dotenv.config({ override: true });
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
