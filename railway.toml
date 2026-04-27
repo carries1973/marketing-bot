@@ -1,0 +1,10 @@
+[build]
+builder = "dockerfile"
+
+[deploy]
+startCommand = "npx tsx src/index.ts"
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
+
+[[services]]
+name = "zen-marketing-agents"
