@@ -88,3 +88,11 @@ server.listen(config.PORT, () => {
 server.on('error', (err) => {
   logger.error('server', 'Server error', err);
 });
+
+// Keep the process alive on async errors — Railway should not restart for one bad webhook.
+process.on('unhandledRejection', (reason) => {
+  logger.error('process', 'Unhandled promise rejection', reason);
+});
+process.on('uncaughtException', (err) => {
+  logger.error('process', 'Uncaught exception', err);
+});
