@@ -25,8 +25,16 @@ const schema = z.object({
 
 const result = schema.safeParse(process.env);
 if (!result.success) {
-  console.error('❌ Missing required environment variables:');
-  result.error.issues.forEach(i => console.error(`  ${i.path.join('.')}: ${i.message}`));
+  console.error(JSON.stringify({
+    ts: new Date().toISOString(),
+    level: 'error',
+    agent: 'config',
+    message: 'Environment validation failed — boot aborted',
+    issues: result.error.issues.map(i => ({
+      var: i.path.join('.'),
+      problem: i.message,
+    })),
+  }));
   process.exit(1);
 }
 

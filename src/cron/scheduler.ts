@@ -12,18 +12,26 @@ function today(): string {
   return new Date().toISOString().split('T')[0];
 }
 
+async function safeRun(label: string, fn: () => Promise<void>) {
+  try {
+    await fn();
+  } catch (err) {
+    logger.error('scheduler', `${label} failed`, err);
+  }
+}
+
 export function startScheduler() {
   // ─── Agent 08: daily vacancy check — 8:00am MT weekdays ──────────────────
-  cron.schedule('0 8 * * 1-5', async () => {
+  cron.schedule('0 8 * * 1-5', () => safeRun('Agent 08 daily', async () => {
     logger.info('scheduler', 'Triggering Agent 08 — daily vacancy check');
     await runAgent08({ mode: 'daily', date: today() });
-  }, { timezone: 'America/Edmonton' });
+  }), { timezone: 'America/Edmonton' });
 
   // ─── Agent 08: Sunday full sync — 11:00pm MT ──────────────────────────────
-  cron.schedule('0 23 * * 0', async () => {
+  cron.schedule('0 23 * * 0', () => safeRun('Agent 08 weekly sync', async () => {
     logger.info('scheduler', 'Triggering Agent 08 — Sunday full sync');
     await runAgent08({ mode: 'weekly_sync', date: today() });
-  }, { timezone: 'America/Edmonton' });
+  }), { timezone: 'America/Edmonton' });
 
   logger.info('scheduler', 'Cron scheduler started', {
     jobs: [
