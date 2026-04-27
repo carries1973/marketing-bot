@@ -87,5 +87,4 @@ server.listen(config.PORT, () => {
 
 server.on('error', (err) => {
   logger.error('server', 'Server error', err);
-  process.exit(1);
 });
