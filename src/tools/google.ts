@@ -195,7 +195,6 @@ export async function gmail_save_yardi_attachments(attachments: YardiEmailAttach
 // ─── Gmail send — replaces m365_create_email_draft for PCG notifications ──────
 
 export async function gmail_send_notification(params: {
-  to: string;
   subject: string;
   body: string;
 }): Promise<void> {
@@ -203,7 +202,7 @@ export async function gmail_send_notification(params: {
   const gmail = google.gmail({ version: 'v1', auth });
 
   const raw = Buffer.from(
-    `To: ${params.to}\r\nSubject: ${params.subject}\r\nContent-Type: text/plain\r\n\r\n${params.body}`,
+    `To: ${config.NOTIFY_EMAIL}\r\nSubject: ${params.subject}\r\nContent-Type: text/plain\r\n\r\n${params.body}`,
   ).toString('base64url');
 
   await gmail.users.messages.send({ userId: 'me', requestBody: { raw } });
@@ -237,15 +236,14 @@ export const GOOGLE_TOOL_DEFINITIONS = [
   },
   {
     name: 'gmail_send_notification',
-    description: 'Send an email notification to Carrie',
+    description: 'Send an email notification to the configured operator (Carrie). Do not specify a recipient — it is set by configuration.',
     input_schema: {
       type: 'object' as const,
       properties: {
-        to: { type: 'string' },
         subject: { type: 'string' },
         body: { type: 'string' },
       },
-      required: ['to', 'subject', 'body'],
+      required: ['subject', 'body'],
     },
   },
 ] as const;
@@ -254,7 +252,7 @@ export async function executeGoogleTool(name: string, input: Record<string, unkn
   switch (name) {
     case 'gdrive_read_file':       return gdrive_read_file(input.drivePath as string);
     case 'gdrive_save_document':   return gdrive_save_document(input as Parameters<typeof gdrive_save_document>[0]);
-    case 'gmail_send_notification':return gmail_send_notification(input as Parameters<typeof gmail_send_notification>[0]);
+    case 'gmail_send_notification':return gmail_send_notification(input as { subject: string; body: string });
     default: throw new Error(`Unknown Google tool: ${name}`);
   }
 }
