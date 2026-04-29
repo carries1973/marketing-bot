@@ -25,31 +25,56 @@ function getAuth() {
 // ─── Google Drive — replaces SharePoint file operations ───────────────────────
 
 export async function gdrive_read_file(drivePath: string): Promise<string> {
-  // drivePath maps to a file name in the configured Yardi data folder
-  // e.g. "/Data/Yardi/vacancy/2026-04-27.csv"
+  // Route to the correct subfolder based on path segment.
+  // Falls back to most-recent file if exact name not found — handles
+  // Yardi's variable naming convention (e.g. UnitAvailabilityDetails04_27_2026.xlsx).
   const auth = getAuth();
   const drive = google.drive({ version: 'v3', auth });
 
-  // Find the file by name in the Yardi data folder
-  const filename = drivePath.split('/').pop()!;
-  const search = await drive.files.list({
-    q: `name='${filename}' and '${requireConfig('GOOGLE_DRIVE_YARDI_FOLDER_ID', 'Google')}' in parents and trashed=false`,
+  const pathLower = drivePath.toLowerCase();
+  let folderId: string;
+  if (pathLower.includes('vacancy'))                              folderId = requireConfig('GOOGLE_DRIVE_YARDI_VACANCY_FOLDER_ID', 'Google');
+  else if (pathLower.includes('rent-roll') || pathLower.includes('rent_roll')) folderId = requireConfig('GOOGLE_DRIVE_YARDI_RENTROLL_FOLDER_ID', 'Google');
+  else if (pathLower.includes('financial'))                       folderId = requireConfig('GOOGLE_DRIVE_YARDI_FINANCIAL_FOLDER_ID', 'Google');
+  else                                                            folderId = requireConfig('GOOGLE_DRIVE_REPORTS_FOLDER_ID', 'Google');
+
+  // Try exact filename first
+  const requestedName = drivePath.split('/').pop()!;
+  let fileId: string | undefined;
+  let fileName: string | undefined;
+
+  const exact = await drive.files.list({
+    q: `name='${requestedName}' and '${folderId}' in parents and trashed=false`,
     fields: 'files(id, name)',
     pageSize: 1,
   });
+  if (exact.data.files?.[0]?.id) {
+    fileId = exact.data.files[0].id!;
+    fileName = exact.data.files[0].name!;
+  } else {
+    // Fall back to most recently created file in the folder
+    const recent = await drive.files.list({
+      q: `'${folderId}' in parents and trashed=false`,
+      fields: 'files(id, name)',
+      orderBy: 'createdTime desc',
+      pageSize: 1,
+    });
+    if (!recent.data.files?.[0]?.id) throw new Error(`No files found in Drive folder for: ${drivePath}`);
+    fileId = recent.data.files[0].id!;
+    fileName = recent.data.files[0].name!;
+  }
 
-  const file = search.data.files?.[0];
-  if (!file?.id) throw new Error(`File not found in Google Drive: ${filename}`);
+  // Download binary and parse XLSX/XLS → CSV string
+  const res = await drive.files.get(
+    { fileId, alt: 'media' },
+    { responseType: 'arraybuffer' },
+  );
+  const XLSX = await import('xlsx');
+  const workbook = XLSX.read(res.data as ArrayBuffer, { type: 'array' });
+  const sheetName = workbook.SheetNames[0];
+  const csv = XLSX.utils.sheet_to_csv(workbook.Sheets[sheetName]);
 
-  // Download as text via export URL
-  const meta = await drive.files.get({ fileId: file.id, fields: 'webContentLink' });
-  const { default: axios } = await import('axios');
-  const tokenRes = await auth.getAccessToken();
-  const contentRes = await axios.get(meta.data.webContentLink!, {
-    headers: { Authorization: `Bearer ${tokenRes.token}` },
-    responseType: 'text',
-  });
-  return contentRes.data as string;
+  return `# File: ${fileName}\n${csv}`;
 }
 
 export async function gdrive_save_document(params: {
@@ -217,7 +242,7 @@ export const GOOGLE_TOOL_DEFINITIONS = [
     input_schema: {
       type: 'object' as const,
       properties: {
-        drivePath: { type: 'string', description: 'Path e.g. /Data/Yardi/vacancy/2026-04-27.csv' },
+        drivePath: { type: 'string', description: 'Path e.g. /Data/Yardi/vacancy/2026-04-27.xlsx' },
       },
       required: ['drivePath'],
     },

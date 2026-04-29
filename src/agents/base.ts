@@ -13,10 +13,11 @@ import { executeGoogleTool, GOOGLE_TOOL_DEFINITIONS } from '../tools/google.js';
 import { executeRentSyncTool, RENTSYNC_TOOL_DEFINITIONS } from '../tools/rentsync.js';
 import { executeWordPressTool, WORDPRESS_TOOL_DEFINITIONS } from '../tools/wordpress.js';
 import { WEB_SEARCH_TOOL_DEFINITION } from '../tools/web-search.js';
+import { executeAgentHandoffTool, AGENT_HANDOFF_TOOL_DEFINITIONS } from '../tools/agent-handoff.js';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type ToolSet = ReadonlyArray<'ghl' | 'm365' | 'google' | 'rentsync' | 'wordpress' | 'web_search'>;
+type ToolSet = ReadonlyArray<'ghl' | 'm365' | 'google' | 'rentsync' | 'wordpress' | 'web_search' | 'agent_handoff'>;
 
 export interface AgentRunResult {
   success: boolean;
@@ -155,7 +156,8 @@ export abstract class BaseAgent {
     if (this.tools.includes('google'))     defs.push(...(GOOGLE_TOOL_DEFINITIONS as unknown as Anthropic.Tool[]));
     if (this.tools.includes('rentsync'))   defs.push(...(RENTSYNC_TOOL_DEFINITIONS as unknown as Anthropic.Tool[]));
     if (this.tools.includes('wordpress')) defs.push(...(WORDPRESS_TOOL_DEFINITIONS as unknown as Anthropic.Tool[]));
-    if (this.tools.includes('web_search')) defs.push(WEB_SEARCH_TOOL_DEFINITION as unknown as Anthropic.Tool);
+    if (this.tools.includes('web_search'))    defs.push(WEB_SEARCH_TOOL_DEFINITION as unknown as Anthropic.Tool);
+    if (this.tools.includes('agent_handoff')) defs.push(...(AGENT_HANDOFF_TOOL_DEFINITIONS as unknown as Anthropic.Tool[]));
     return defs;
   }
 
@@ -164,7 +166,8 @@ export abstract class BaseAgent {
     if (name.startsWith('m365_'))       return executeM365Tool(name, input);
     if (name.startsWith('gdrive_') || name.startsWith('gmail_')) return executeGoogleTool(name, input);
     if (name.startsWith('rentsync_'))   return executeRentSyncTool(name, input);
-    if (name.startsWith('wordpress_')) return executeWordPressTool(name, input);
+    if (name.startsWith('wordpress_'))  return executeWordPressTool(name, input);
+    if (name === 'trigger_agent01')    return executeAgentHandoffTool(name, input);
     // web_search is handled natively by Claude — result comes back as tool_result from the API
     throw new Error(`Unknown tool namespace: ${name}`);
   }

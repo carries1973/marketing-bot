@@ -152,7 +152,7 @@ export interface Agent01Payload {
     availableDate?: string;   // ISO date
   };
   existingListingId?: string; // If updating existing RentSync listing
-  broadcastCampaignId: string; // GHL campaign ID for the email broadcast
+  broadcastCampaignId?: string; // GHL campaign ID for the email broadcast — if omitted, broadcast step is skipped
 }
 
 // ─── Runner ───────────────────────────────────────────────────────────────────
@@ -174,7 +174,9 @@ Steps to complete:
 1. Fetch building profile: ghl_get_building_profile(locationId="${payload.buildingId}")
 2. Write and publish ILS copy: ${payload.existingListingId ? `rentsync_update_listing(listingId="${payload.existingListingId}", ...)` : `rentsync_create_listing(...)`}
 3. Write 3 social captions and schedule the best one via ghl_schedule_social
-4. Prepare email broadcast subject + preview text for Sam approval (campaignId="${payload.broadcastCampaignId}")
+4. ${payload.broadcastCampaignId
+    ? `Prepare email broadcast subject + preview text for Sam approval (campaignId="${payload.broadcastCampaignId}")`
+    : `Skip email broadcast — no campaign ID provided`}
 5. Update WordPress availability page (slug="${payload.wordPressSlug}")
 6. Post completion summary to Teams #digital-ops`;
 

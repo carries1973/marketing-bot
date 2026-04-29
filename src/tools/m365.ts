@@ -41,7 +41,7 @@ async function graph(method: 'get' | 'post' | 'put' | 'patch', path: string, dat
 // ─── SharePoint file tools ────────────────────────────────────────────────────
 
 export async function m365_read_file(sharePointPath: string): Promise<string> {
-  // e.g. sharePointPath = "/Data/Yardi/vacancy/2026-04-27.csv"
+  // e.g. sharePointPath = "/Data/Yardi/vacancy/2026-04-27.xlsx"
   const siteId = config.M365_SHAREPOINT_SITE_ID;
   const encoded = encodeURIComponent(sharePointPath);
   const meta = await graph('get', `/sites/${siteId}/drive/root:${encoded}`);
@@ -153,7 +153,7 @@ export const M365_TOOL_DEFINITIONS = [
     input_schema: {
       type: 'object' as const,
       properties: {
-        sharePointPath: { type: 'string', description: 'Absolute path e.g. /Data/Yardi/vacancy/2026-04-27.csv' },
+        sharePointPath: { type: 'string', description: 'Absolute path e.g. /Data/Yardi/vacancy/2026-04-27.xlsx' },
       },
       required: ['sharePointPath'],
     },
